@@ -1,0 +1,47 @@
+name: Trigger auto deployment for azappservices
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/azappservices-AutoDeployTrigger-ad2135bc-051f-4816-80ef-45fc1e6ca342.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZAPPSERVICES_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZAPPSERVICES_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZAPPSERVICES_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: 
+          registryUsername: ${{ secrets.AZAPPSERVICES_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.AZAPPSERVICES_REGISTRY_PASSWORD }}
+          containerAppName: azappservices
+          resourceGroup: azappservice
+          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
